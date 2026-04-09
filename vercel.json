@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "emberfall-web/package.json",
+      "use": "@vercel/next"
+    }
+  ]
+}
