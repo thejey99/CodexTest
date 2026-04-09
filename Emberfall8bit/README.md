@@ -1,6 +1,6 @@
 # Emberfall: Ash of the Oath
 
-A dark-fantasy 8-bit iOS adventure prototype built with SwiftUI. The game follows **Kael Veyr**, a battle-scarred mercenary who survived the fall of Emberfall Keep. Kael carries severe trauma, fragmented memories, and a relentless need to finish the war that already destroyed him.
+A dark-fantasy 8-bit iOS adventure prototype built with SwiftUI, now tuned for small and large phone layouts. The game follows **Kael Veyr**, a battle-scarred mercenary who survived the fall of Emberfall Keep. Kael carries severe trauma, fragmented memories, and a relentless need to finish the war that already destroyed him.
 
 Across several levels, the player uncovers the truth of the so-called Dark Lord. What begins as a monster hunt slowly becomes a story about guilt, sacrifice, and a failed attempt to save a dying world.
 
