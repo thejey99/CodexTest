@@ -1,254 +1,365 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { levels, survivorFragment, weapons } from "./game-data";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const maxPlayerHearts = 6;
+type Fighter = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  hp: number;
+  facing: 1 | -1;
+  attackCooldown: number;
+  hitStun: number;
+};
+
+const arena = {
+  width: 720,
+  height: 300,
+  floorY: 230,
+  gravity: 0.65,
+  moveSpeed: 3.2,
+  jumpVelocity: -11.4,
+  attackRange: 62,
+  attackDamage: 8,
+  attackFrames: 18,
+  maxHp: 100,
+  enemySpeed: 2.15,
+  enemyAttackRange: 58,
+  enemyAttackFrames: 26,
+  enemyDamage: 7,
+  spawnX: 120,
+  enemySpawnX: 580,
+  fighterWidth: 32,
+  fighterHeight: 42
+};
+
+const initialPlayer = (): Fighter => ({
+  x: arena.spawnX,
+  y: arena.floorY,
+  vx: 0,
+  vy: 0,
+  hp: arena.maxHp,
+  facing: 1,
+  attackCooldown: 0,
+  hitStun: 0
+});
+
+const initialEnemy = (): Fighter => ({
+  x: arena.enemySpawnX,
+  y: arena.floorY,
+  vx: 0,
+  vy: 0,
+  hp: arena.maxHp,
+  facing: -1,
+  attackCooldown: 0,
+  hitStun: 0
+});
 
 export default function EmberfallGame() {
-  const [playerIndex, setPlayerIndex] = useState(0);
-  const [isJumping, setIsJumping] = useState(false);
-  const [selectedWeapon, setSelectedWeapon] = useState(weapons[0].id);
-  const [unlockedFragments, setUnlockedFragments] = useState([survivorFragment]);
-  const [clearedLevelIds, setClearedLevelIds] = useState<number[]>([]);
-  const [enemyHp, setEnemyHp] = useState(12);
-  const [playerHearts, setPlayerHearts] = useState(maxPlayerHearts);
-  const [combatLog, setCombatLog] = useState("A memory shade stalks the grass. Strike first.");
+  const [player, setPlayer] = useState<Fighter>(() => initialPlayer());
+  const [enemy, setEnemy] = useState<Fighter>(() => initialEnemy());
+  const [round, setRound] = useState(1);
+  const [message, setMessage] = useState("Move with A/D, jump with W/Space, punch with J.");
+  const [wins, setWins] = useState({ player: 0, enemy: 0 });
+  const [timeLeft, setTimeLeft] = useState(60);
 
-  const selectedWeaponData = useMemo(
-    () => weapons.find((weapon) => weapon.id === selectedWeapon) ?? weapons[0],
-    [selectedWeapon]
-  );
+  const pressedRef = useRef<Record<string, boolean>>({});
+  const timerRef = useRef<number | null>(null);
 
-  const currentLevel = levels[playerIndex];
-  const progressPercent = (playerIndex / Math.max(levels.length - 1, 1)) * 100;
-  const hasNext = playerIndex < levels.length - 1;
-  const hasPrev = playerIndex > 0;
-  const levelIsCleared = clearedLevelIds.includes(currentLevel.id);
+  const distance = useMemo(() => Math.abs(player.x - enemy.x), [player.x, enemy.x]);
+  const playerGrounded = player.y >= arena.floorY;
 
-  const rollDamage = () => {
-    const baseDamage =
-      selectedWeapon === "greatsword" ? 4 : selectedWeapon === "twinBlades" ? 3 : selectedWeapon === "halberd" ? 3 : 2;
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-    return baseDamage + Math.floor(Math.random() * 3);
-  };
-
-  const moveToLevel = (nextIndex: number) => {
-    setPlayerIndex(nextIndex);
-    setIsJumping(false);
-    setEnemyHp(12);
-    setPlayerHearts(maxPlayerHearts);
-    setCombatLog("A new echo forms ahead. Sprint, jump, and strike through the lane.");
-  };
-
-  const moveRight = () => {
-    if (hasNext) {
-      moveToLevel(playerIndex + 1);
-    }
-  };
-
-  const jump = () => {
-    setIsJumping(true);
-    setCombatLog("Kael vaults over broken stone, landing into the next beat of battle.");
-
-    window.setTimeout(() => {
-      setIsJumping(false);
-    }, 420);
-  };
-
-  const moveLeft = () => {
-    if (hasPrev) {
-      moveToLevel(playerIndex - 1);
-    }
-  };
-
-  const clearCurrentLevel = () => {
-    if (levelIsCleared) {
-      return;
-    }
-
-    setClearedLevelIds((prev) => [...prev, currentLevel.id]);
-    setUnlockedFragments((prev) => [
-      ...prev,
-      {
-        id: `${currentLevel.id}-${Date.now()}`,
-        title: currentLevel.title,
-        body: currentLevel.revelation
-      }
-    ]);
-  };
-
-  const slashEnemy = () => {
-    if (levelIsCleared) {
-      setCombatLog("Zone already pacified. Run to the next checkpoint.");
-      return;
-    }
-
-    if (playerHearts <= 0) {
-      setCombatLog("Kael is down. Drink an ember tonic to continue.");
-      return;
-    }
-
-    const playerDamage = rollDamage();
-    const enemyDamage = 1 + Math.floor(Math.random() * 3);
-
-    const nextEnemyHp = Math.max(enemyHp - playerDamage, 0);
-
-    if (nextEnemyHp <= 0) {
-      setEnemyHp(0);
-      setCombatLog(`Blade combo hits for ${playerDamage}. Echo shattered! Recover the lore shard.`);
-      clearCurrentLevel();
-      return;
-    }
-
-    const nextPlayerHearts = Math.max(playerHearts - enemyDamage, 0);
-    setEnemyHp(nextEnemyHp);
-    setPlayerHearts(nextPlayerHearts);
-
-    if (nextPlayerHearts <= 0) {
-      setCombatLog(`You dealt ${playerDamage}, but took ${enemyDamage}. Kael falls to the echo.`);
-      return;
-    }
-
-    setCombatLog(`You deal ${playerDamage} and take ${enemyDamage}. Keep momentum and stay aggressive.`);
-  };
-
-  const healPlayer = () => {
-    if (playerHearts === maxPlayerHearts) {
-      setCombatLog("Hearts already full.");
-      return;
-    }
-
-    if (levelIsCleared) {
-      setCombatLog("Campfire restores your hearts between battles.");
+  const resetRound = (winner: "player" | "enemy" | "draw") => {
+    if (winner === "player") {
+      setWins((prev) => ({ ...prev, player: prev.player + 1 }));
+      setMessage("Round won. Enemy respawning tougher.");
+    } else if (winner === "enemy") {
+      setWins((prev) => ({ ...prev, enemy: prev.enemy + 1 }));
+      setMessage("Enemy takes the round. Run it back.");
     } else {
-      setCombatLog("Quick potion sip! One heart restored.");
+      setMessage("Time out. Next round now.");
     }
 
-    setPlayerHearts((prev) => Math.min(prev + 1, maxPlayerHearts));
+    setRound((prev) => prev + 1);
+    setPlayer(initialPlayer());
+    setEnemy(initialEnemy());
+    setTimeLeft(60);
   };
 
-  const restartCampaign = () => {
-    setPlayerIndex(0);
-    setClearedLevelIds([]);
-    setUnlockedFragments([survivorFragment]);
-    setEnemyHp(12);
-    setPlayerHearts(maxPlayerHearts);
-    setCombatLog("The oath restarts at Ashen Causeway.");
-  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      pressedRef.current[key] = true;
+
+      if (key === " " || key === "w") {
+        setPlayer((current) => {
+          if (current.y < arena.floorY) {
+            return current;
+          }
+          return { ...current, vy: arena.jumpVelocity };
+        });
+      }
+
+      if (key === "j") {
+        setPlayer((current) => {
+          if (current.attackCooldown > 0 || current.hitStun > 0) {
+            return current;
+          }
+
+          const next = { ...current, attackCooldown: arena.attackFrames };
+          setEnemy((foe) => {
+            if (foe.hitStun > 0) {
+              return foe;
+            }
+
+            const hitDistance = Math.abs(current.x - foe.x);
+            const facingTarget = current.facing === 1 ? foe.x >= current.x : foe.x <= current.x;
+            if (hitDistance <= arena.attackRange && facingTarget) {
+              setMessage("Direct hit.");
+              return {
+                ...foe,
+                hp: Math.max(0, foe.hp - arena.attackDamage),
+                hitStun: 10,
+                vx: current.facing * 4
+              };
+            }
+
+            setMessage("Whiff.");
+            return foe;
+          });
+
+          return next;
+        });
+      }
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      pressedRef.current[event.key.toLowerCase()] = false;
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+    }
+
+    timerRef.current = window.setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+    };
+  }, [round]);
+
+  useEffect(() => {
+    if (timeLeft === 0) {
+      if (player.hp === enemy.hp) {
+        resetRound("draw");
+      } else {
+        resetRound(player.hp > enemy.hp ? "player" : "enemy");
+      }
+    }
+  }, [timeLeft, player.hp, enemy.hp]);
+
+  useEffect(() => {
+    if (player.hp <= 0) {
+      resetRound("enemy");
+      return;
+    }
+
+    if (enemy.hp <= 0) {
+      resetRound("player");
+    }
+  }, [player.hp, enemy.hp]);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      setPlayer((current) => {
+        let vx = 0;
+        if (current.hitStun <= 0) {
+          if (pressedRef.current.a) {
+            vx = -arena.moveSpeed;
+          }
+          if (pressedRef.current.d) {
+            vx = arena.moveSpeed;
+          }
+        }
+
+        const nextVy = current.vy + arena.gravity;
+        const nextX = clamp(current.x + vx, 20, arena.width - 20);
+        const nextY = Math.min(arena.floorY, current.y + nextVy);
+
+        return {
+          ...current,
+          x: nextX,
+          y: nextY,
+          vx,
+          vy: nextY >= arena.floorY ? 0 : nextVy,
+          facing: vx < 0 ? -1 : vx > 0 ? 1 : current.facing,
+          attackCooldown: Math.max(0, current.attackCooldown - 1),
+          hitStun: Math.max(0, current.hitStun - 1)
+        };
+      });
+
+      setEnemy((current) => {
+        if (current.hp <= 0) {
+          return current;
+        }
+
+        return {
+          ...current,
+          attackCooldown: Math.max(0, current.attackCooldown - 1),
+          hitStun: Math.max(0, current.hitStun - 1)
+        };
+      });
+    }, 16);
+
+    return () => window.clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    setEnemy((foe) => {
+      if (foe.hitStun > 0 || foe.hp <= 0) {
+        return foe;
+      }
+
+      const direction = player.x > foe.x ? 1 : -1;
+      const nextFacing: 1 | -1 = direction === 1 ? 1 : -1;
+      const canAttack = distance <= arena.enemyAttackRange && foe.attackCooldown <= 0;
+
+      if (canAttack) {
+        setPlayer((hero) => {
+          if (hero.hitStun > 0) {
+            return hero;
+          }
+          return {
+            ...hero,
+            hp: Math.max(0, hero.hp - arena.enemyDamage),
+            hitStun: 8,
+            vx: direction * -3
+          };
+        });
+
+        return {
+          ...foe,
+          facing: nextFacing,
+          attackCooldown: arena.enemyAttackFrames
+        };
+      }
+
+      const desiredVx = distance > arena.enemyAttackRange - 8 ? direction * arena.enemySpeed : 0;
+      const nextX = clamp(foe.x + desiredVx, 20, arena.width - 20);
+      const nextVy = foe.vy + arena.gravity;
+      const nextY = Math.min(arena.floorY, foe.y + nextVy);
+
+      return {
+        ...foe,
+        x: nextX,
+        y: nextY,
+        vx: desiredVx,
+        vy: nextY >= arena.floorY ? 0 : nextVy,
+        facing: nextFacing
+      };
+    });
+  }, [player.x, distance]);
+
+  const hpToPercent = (hp: number) => `${Math.max(0, hp)}%`;
 
   return (
-    <main className="shell">
-      <h1>EMBERFALL: ASH OF THE OATH</h1>
-
+    <main className="shell arena-shell">
+      <h1>EMBERFALL BRAWLER // TOTAL REBUILD</h1>
       <section className="card">
-        <h2>2D Side-Scroller Route</h2>
-        <p className="muted">Mario-style left-to-right lane with platform hops, story checkpoints, and live battles.</p>
-        <div className="track-wrap" aria-label="Campaign progress">
-          <div className="track-progress" style={{ width: `${progressPercent}%` }} />
+        <div className="hud-row">
+          <div>
+            <p className="muted">Round {round}</p>
+            <p>Player Wins: {wins.player}</p>
+          </div>
+          <div>
+            <p className="muted">Timer</p>
+            <p>{timeLeft}s</p>
+          </div>
+          <div>
+            <p className="muted">Enemy Wins</p>
+            <p>{wins.enemy}</p>
+          </div>
         </div>
-        <div className="overworld" role="region" aria-label="2D side-scrolling route">
-          <div className="platform-strip">
-            {levels.map((level, index) => {
-              const isCurrent = index === playerIndex;
-              const isCleared = clearedLevelIds.includes(level.id);
 
-              return (
-                <div key={`platform-${level.id}`} className={`platform-node ${isCurrent ? "current" : ""}`}>
-                  <span>{isCleared ? "✅" : "🧱"}</span>
-                  <span>Stage {level.id}</span>
-                </div>
-              );
-            })}
+        <div className="hp-panel">
+          <div>
+            <p>Player</p>
+            <div className="hp-track">
+              <div className="hp-fill player" style={{ width: hpToPercent(player.hp) }} />
+            </div>
+          </div>
+          <div>
+            <p>Enemy</p>
+            <div className="hp-track">
+              <div className="hp-fill enemy" style={{ width: hpToPercent(enemy.hp) }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="arena" role="img" aria-label="2D combat arena">
+          <div className="ground" />
+          <div
+            className={`fighter player ${player.attackCooldown > arena.attackFrames - 5 ? "attack" : ""}`}
+            style={{ left: player.x, top: player.y, transform: `translate(-50%, -100%) scaleX(${player.facing})` }}
+          >
+            🥊
           </div>
           <div
-            className={`runner ${isJumping ? "jumping" : ""}`}
-            style={{ left: `calc(${progressPercent}% - 0.6rem)` }}
-            aria-hidden="true"
+            className={`fighter enemy ${enemy.attackCooldown > arena.enemyAttackFrames - 5 ? "attack" : ""}`}
+            style={{ left: enemy.x, top: enemy.y, transform: `translate(-50%, -100%) scaleX(${enemy.facing})` }}
           >
-            ⚔️
+            🤖
           </div>
+        </div>
 
-          {levels.map((level, index) => {
-            const isCurrent = index === playerIndex;
-            const isCleared = clearedLevelIds.includes(level.id);
+        <p className="combat-log">{message}</p>
 
-            return (
-              <article key={level.id} className={`lane-node ${isCurrent ? "current" : ""}`}>
-                <p className="node-index">Area {level.id}</p>
-                <h3>{level.title}</h3>
-                <p>{isCleared ? "Echo Cleared" : "Echo Active"}</p>
-              </article>
-            );
-          })}
-        </div>
-        <div className="actions movement">
-          <button type="button" onClick={moveLeft} disabled={!hasPrev} aria-label="Run to previous checkpoint">
-            ◀ Run Left
-          </button>
-          <button type="button" onClick={jump} aria-label="Jump over hazard">
-            ⤴ Jump
-          </button>
-          <button type="button" onClick={moveRight} disabled={!hasNext} aria-label="Run to next checkpoint">
-            Run Right ▶
+        <div className="controls">
+          <span>A/D = Move</span>
+          <span>W or Space = Jump</span>
+          <span>J = Attack</span>
+          <button
+            type="button"
+            onClick={() => {
+              setPlayer(initialPlayer());
+              setEnemy(initialEnemy());
+              setRound(1);
+              setWins({ player: 0, enemy: 0 });
+              setTimeLeft(60);
+              setMessage("Fresh match started.");
+            }}
+          >
+            Reset Match
           </button>
         </div>
-      </section>
-
-      <section className="card combat-card">
-        <h2>Live Combat Arena</h2>
-        <h3>{currentLevel.title}</h3>
-        <p>{currentLevel.objective}</p>
-        <p className="muted">Atmosphere: {currentLevel.atmosphere}</p>
-        <div className="hud">
-          <p>Kael Hearts: {"❤️".repeat(playerHearts)}{"🖤".repeat(maxPlayerHearts - playerHearts)}</p>
-          <p>Echo Vitality: {enemyHp}/12</p>
-        </div>
-        <div className="combat-actions">
-          <button type="button" className="primary" onClick={slashEnemy}>
-            ⚔ Slash
-          </button>
-          <button type="button" onClick={healPlayer}>
-            🧪 Potion
-          </button>
-        </div>
-        <p className="combat-log">{combatLog}</p>
-        <p className="accent">Boss Echo: {currentLevel.bossEcho}</p>
       </section>
 
       <section className="card">
-        <h2>Weapon Style</h2>
-        <div className="segmented" role="radiogroup" aria-label="Weapon style selector">
-          {weapons.map((weapon) => (
-            <button
-              key={weapon.id}
-              type="button"
-              className={weapon.id === selectedWeapon ? "active" : ""}
-              onClick={() => setSelectedWeapon(weapon.id)}
-            >
-              {weapon.name}
-            </button>
-          ))}
-        </div>
-        <p>{selectedWeaponData.combatIdentity}</p>
-      </section>
-
-      <section className="card">
-        <h2>Recovered Lore</h2>
-        <div className="lore-list">
-          {[...unlockedFragments].reverse().map((fragment) => (
-            <article key={fragment.id}>
-              <h3>{fragment.title}</h3>
-              <p>{fragment.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="actions">
-        <button type="button" onClick={restartCampaign}>
-          Restart Campaign
-        </button>
+        <h2>Gameplay Notes</h2>
+        <ul className="notes">
+          <li>Single-stage 2D arena with free left/right movement.</li>
+          <li>Real-time collision checks and attack range validation.</li>
+          <li>AI chases, attacks, and trades blows instantly.</li>
+        </ul>
+        <p className="muted">No storybook scroller. This is pure movement + combat loop.</p>
+        <p className="muted">Player grounded: {playerGrounded ? "yes" : "airborne"} · Spacing: {Math.round(distance)} px</p>
       </section>
     </main>
   );

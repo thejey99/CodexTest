@@ -2,10 +2,10 @@
   color-scheme: dark;
   --bg: #060606;
   --panel: #141414;
-  --stroke: #272727;
+  --stroke: #2f2f2f;
   --text: #f2f2f2;
-  --muted: #b8b8b8;
-  --accent: #ff5a5a;
+  --muted: #a9a9a9;
+  --accent: #ff6a4d;
 }
 
 * {
@@ -15,17 +15,9 @@
 html,
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #1d1d1d, var(--bg));
+  background: radial-gradient(circle at top, #232323, var(--bg));
   color: var(--text);
   font-family: "Courier New", Courier, monospace;
-}
-
-.shell {
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  gap: 14px;
 }
 
 h1,
@@ -35,221 +27,145 @@ p {
   margin: 0;
 }
 
-h1 {
+.shell {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.arena-shell h1 {
   color: var(--accent);
-  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-size: clamp(1.1rem, 3.8vw, 1.9rem);
 }
 
 .card {
   border: 1px solid var(--stroke);
-  background: color-mix(in srgb, var(--panel) 87%, black);
+  background: color-mix(in srgb, var(--panel) 88%, black);
   border-radius: 12px;
   padding: 14px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .muted {
   color: var(--muted);
 }
 
-.accent {
-  color: #ff9f68;
-}
-
-.overworld {
+.hud-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  background: linear-gradient(180deg, #3b6f92 0%, #3d5b76 48%, #2f492f 49%, #213721 100%);
-  border: 1px solid #3f5a3f;
-  padding: 10px;
-  border-radius: 10px;
-  position: relative;
-  overflow: hidden;
 }
 
-.track-wrap {
-  height: 8px;
-  border-radius: 999px;
-  border: 1px solid #4f4f4f;
-  background: #171717;
-  overflow: hidden;
-}
-
-.track-progress {
-  height: 100%;
-  background: linear-gradient(90deg, #ffcd68, #ff6c48);
-  transition: width 200ms ease;
-}
-
-.platform-strip {
-  grid-column: 1 / -1;
+.hp-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(70px, 1fr));
-  align-items: end;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.platform-node {
-  border: 1px solid #55656d;
-  border-radius: 8px;
-  background: rgba(21, 21, 21, 0.65);
-  min-height: 44px;
+.hp-track {
+  height: 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: #0f0f0f;
+  overflow: hidden;
+}
+
+.hp-fill {
+  height: 100%;
+  transition: width 140ms linear;
+}
+
+.hp-fill.player {
+  background: linear-gradient(90deg, #4cd964, #8eff63);
+}
+
+.hp-fill.enemy {
+  background: linear-gradient(90deg, #ff5d5d, #ff9068);
+}
+
+.arena {
+  position: relative;
+  height: 300px;
+  border: 1px solid #48564c;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #6da4d4 0%, #345d7b 52%, #223c2a 52%, #1c2c1f 100%),
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(255, 255, 255, 0.05) 34px 35px);
+}
+
+.ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 230px;
+  height: 70px;
+  border-top: 2px solid #8fb58f;
+  background: repeating-linear-gradient(90deg, #2d4b35 0 28px, #2a4531 28px 56px);
+}
+
+.fighter {
+  position: absolute;
+  width: 32px;
+  height: 42px;
   display: grid;
   place-items: center;
-  gap: 2px;
-  font-size: 0.76rem;
+  font-size: 1.5rem;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  transition: filter 80ms linear;
 }
 
-.platform-node.current {
-  border-color: #ffe07a;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe07a 50%, transparent);
-}
-
-.runner {
-  position: absolute;
-  top: 62px;
-  font-size: 1.2rem;
-  transition: left 200ms ease;
-}
-
-.runner.jumping {
-  animation: hop 420ms ease;
-}
-
-@keyframes hop {
-  0% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-18px);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
-.lane-node {
-  border: 1px solid var(--stroke);
-  border-radius: 10px;
-  padding: 10px;
-  background: color-mix(in srgb, #193019 62%, #1a1a1a);
-  min-height: 105px;
-  display: grid;
-  align-content: start;
-  gap: 4px;
-}
-
-.lane-node.current {
-  border-color: #ffe07a;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe07a 50%, transparent);
-  background: #3b341f;
-}
-
-.node-index {
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.segmented {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.segmented button,
-.actions button,
-.combat-actions button {
-  border: 1px solid var(--stroke);
-  border-radius: 10px;
-  background: #202020;
-  color: var(--text);
-  min-height: 44px;
-  padding: 8px;
-}
-
-.segmented button.active {
-  border-color: var(--accent);
-  background: #311717;
-}
-
-.actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.lore-list {
-  display: grid;
-  gap: 10px;
-  max-height: 260px;
-  overflow: auto;
-}
-
-.lore-list article {
-  border-top: 1px dashed var(--stroke);
-  padding-top: 8px;
-  display: grid;
-  gap: 4px;
-}
-
-.lore-list p {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.actions {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.actions.movement {
-  margin-top: 4px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.actions .primary,
-.combat-actions .primary {
-  background: #8f2020;
-  border-color: #bc3a3a;
-}
-
-.combat-card {
-  border-color: #6c4c1b;
-}
-
-.hud {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  font-size: 0.95rem;
-}
-
-.combat-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+.fighter.attack {
+  filter: brightness(1.5);
 }
 
 .combat-log {
-  border: 1px dashed #7d6445;
+  border: 1px dashed #5d5d5d;
   border-radius: 8px;
-  padding: 8px;
-  background: #1e1810;
   min-height: 46px;
+  padding: 8px;
+  background: #171717;
 }
 
-@media (max-width: 520px) {
-  .segmented,
-  .actions,
-  .combat-actions,
-  .hud,
-  .overworld {
+.controls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+}
+
+button {
+  border: 1px solid #3e3e3e;
+  border-radius: 9px;
+  min-height: 42px;
+  background: #232323;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .hud-row,
+  .hp-panel,
+  .controls {
     grid-template-columns: 1fr;
   }
 
-  .platform-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .arena {
+    height: 260px;
+  }
+
+  .ground {
+    top: 200px;
+    height: 60px;
   }
 }
