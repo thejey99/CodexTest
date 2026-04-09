@@ -2,154 +2,112 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type EnemyType = "crawler" | "turret" | "brute";
-type HeroAnim = "idle" | "run" | "jump" | "attack" | "dash" | "hurt";
+type HeroAnim = "idle" | "run" | "jump" | "slide" | "hurt";
 
-type Enemy = {
-  id: number;
-  type: EnemyType;
-  level: number;
-  x: number;
-  y: number;
-  vx: number;
-  hp: number;
-  maxHp: number;
-  damage: number;
+type Hero = {
+  id: "nova" | "bolt" | "mira";
+  name: string;
+  color: string;
+  glyph: string;
   speed: number;
-  aggroRange: number;
-  attackCooldown: number;
-  alive: boolean;
+  jumpPower: number;
 };
 
-type Spark = {
+type Coin = {
   id: number;
   x: number;
   y: number;
-  vx: number;
-  life: number;
-  team: "hero" | "enemy";
-  damage: number;
+  picked: boolean;
 };
 
-type StoryBeat = {
+type Hazard = {
+  id: number;
   x: number;
-  title: string;
-  body: string;
+  width: number;
+  lane: "ground" | "high";
 };
 
-const WORLD_WIDTH = 7600;
-const GROUND_Y = 448;
-const GRAVITY = 0.86;
-const CAMERA_WIDTH = 1020;
-const HERO_WIDTH = 42;
-const MAX_HP = 170;
+type Platform = {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+};
 
-const storyBeats: StoryBeat[] = [
-  {
-    x: 180,
-    title: "Bramblebrook Borough",
-    body: "Inventor Luma has been captured in Clocktop Keep. Collect three Sky Keys to unlock the final drawbridge."
-  },
-  {
-    x: 1750,
-    title: "Bubblebluff Meadows",
-    body: "Mayor Pip warns you that spring-loaded troopers patrol in squads and can pin you down from afar."
-  },
-  {
-    x: 3420,
-    title: "Cogwhistle Caverns",
-    body: "Underground lifts rumble awake. Heavy bruisers can shoulder-check you off moving platforms."
-  },
-  {
-    x: 5200,
-    title: "Thunderpetal Heights",
-    body: "Storm blossoms spawn elite hunters here, and every encounter scales harder than before."
-  },
-  {
-    x: 7060,
-    title: "Clocktop Keep",
-    body: "Final gate unlocked. Defeat Baron Brambletron and rescue Luma before midnight chimes."
-  }
+const TRACK_LENGTH = 5200;
+const VIEWPORT_WIDTH = 1020;
+const BASELINE_Y = 420;
+const HERO_WIDTH = 44;
+const HERO_HEIGHT = 62;
+const GRAVITY = 0.82;
+const LEVEL_END = TRACK_LENGTH - 180;
+
+const heroes: Hero[] = [
+  { id: "nova", name: "Nova Fox", color: "#ff8756", glyph: "🦊", speed: 6.2, jumpPower: 14.4 },
+  { id: "bolt", name: "Bolt Rabbit", color: "#72d7ff", glyph: "🐇", speed: 7, jumpPower: 13.5 },
+  { id: "mira", name: "Mira Cat", color: "#d38cff", glyph: "🐈", speed: 5.9, jumpPower: 15.8 }
 ];
 
-const biomeBands = [
-  { id: "starfield", start: 0, end: 1580, label: "Bramblebrook Path", sky: "var(--sky-one)" },
-  { id: "moss", start: 1580, end: 3120, label: "Bubblebluff Meadows", sky: "var(--sky-two)" },
-  { id: "gear", start: 3120, end: 4900, label: "Cogwhistle Caverns", sky: "var(--sky-three)" },
-  { id: "void", start: 4900, end: WORLD_WIDTH, label: "Thunderpetal Heights", sky: "var(--sky-four)" }
+const platforms: Platform[] = [
+  { id: 1, x: 460, y: 332, width: 130 },
+  { id: 2, x: 840, y: 288, width: 150 },
+  { id: 3, x: 1290, y: 346, width: 120 },
+  { id: 4, x: 1720, y: 292, width: 170 },
+  { id: 5, x: 2210, y: 332, width: 136 },
+  { id: 6, x: 2670, y: 286, width: 150 },
+  { id: 7, x: 3130, y: 340, width: 145 },
+  { id: 8, x: 3600, y: 300, width: 168 },
+  { id: 9, x: 4070, y: 338, width: 148 }
 ];
+
+const seedCoins = (): Coin[] =>
+  Array.from({ length: 56 }).map((_, index) => {
+    const laneOffset = index % 4 === 0 ? -130 : index % 3 === 0 ? -180 : -80;
+    const platform = platforms.find((item) => Math.abs(item.x - (260 + index * 86)) < 44);
+
+    return {
+      id: index + 1,
+      x: 260 + index * 86,
+      y: platform ? platform.y - 38 : BASELINE_Y + laneOffset,
+      picked: false
+    };
+  });
+
+const hazards: Hazard[] = Array.from({ length: 22 }).map((_, index) => ({
+  id: index + 1,
+  x: 560 + index * 200,
+  width: index % 4 === 0 ? 64 : 52,
+  lane: index % 3 === 0 ? "high" : "ground"
+}));
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const zoneForX = (x: number) => biomeBands.find((band) => x >= band.start && x < band.end) ?? biomeBands[0];
-
-const spawnEnemies = (): Enemy[] => {
-  const enemies: Enemy[] = [];
-  let id = 1;
-
-  for (let i = 0; i < 30; i += 1) {
-    const zoneBias = i < 9 ? 1 : i < 18 ? 2 : i < 24 ? 3 : 4;
-    const type: EnemyType = i % 5 === 0 ? "brute" : i % 3 === 0 ? "turret" : "crawler";
-
-    const level = zoneBias + Math.floor(i / 5);
-    const maxHp = type === "brute" ? 120 + level * 24 : type === "turret" ? 85 + level * 14 : 72 + level * 16;
-
-    enemies.push({
-      id,
-      type,
-      level,
-      x: 340 + i * 236,
-      y: GROUND_Y,
-      vx: i % 2 === 0 ? 1 : -1,
-      hp: maxHp,
-      maxHp,
-      damage: type === "brute" ? 16 + level * 2 : 8 + level * 2,
-      speed: type === "brute" ? 1.05 + level * 0.05 : type === "turret" ? 0.6 : 1.7 + level * 0.09,
-      aggroRange: type === "turret" ? 520 : 340,
-      attackCooldown: 0,
-      alive: true
-    });
-
-    id += 1;
-  }
-
-  return enemies;
-};
-
 export default function EmberfallGame() {
-  const heroX = useRef(80);
-  const heroY = useRef(GROUND_Y);
-  const heroVx = useRef(0);
-  const heroVy = useRef(0);
-  const facing = useRef<1 | -1>(1);
-
-  const [heroHp, setHeroHp] = useState(MAX_HP);
-  const [heroAnim, setHeroAnim] = useState<HeroAnim>("idle");
+  const [selectedHero, setSelectedHero] = useState<Hero>(heroes[0]);
+  const [coins, setCoins] = useState<Coin[]>(seedCoins);
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [timer, setTimer] = useState(250);
   const [cameraX, setCameraX] = useState(0);
-  const [worldTick, setWorldTick] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [heroLevel, setHeroLevel] = useState(1);
-  const [combo, setCombo] = useState(0);
-  const [story, setStory] = useState(storyBeats[0]);
-  const [questProgress, setQuestProgress] = useState(0);
+  const [anim, setAnim] = useState<HeroAnim>("idle");
+  const [won, setWon] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  const [enemies, setEnemies] = useState<Enemy[]>(spawnEnemies);
-  const [sparks, setSparks] = useState<Spark[]>([]);
-
+  const x = useRef(70);
+  const y = useRef(BASELINE_Y);
+  const vx = useRef(0);
+  const vy = useRef(0);
+  const facing = useRef<1 | -1>(1);
+  const invuln = useRef(0);
   const keys = useRef<Record<string, boolean>>({});
-  const combatCooldown = useRef(0);
-  const dashCooldown = useRef(0);
-  const hurtCooldown = useRef(0);
-  const storyIndexRef = useRef(0);
 
-  const aliveEnemies = useMemo(() => enemies.filter((enemy) => enemy.alive), [enemies]);
-  const zone = zoneForX(heroX.current);
+  const collected = useMemo(() => coins.filter((coin) => coin.picked).length, [coins]);
+  const progress = Math.round((x.current / LEVEL_END) * 100);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       keys.current[event.key.toLowerCase()] = true;
-      if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(event.key.toLowerCase())) {
+      if ([" ", "arrowleft", "arrowright", "arrowup", "arrowdown"].includes(event.key.toLowerCase())) {
         event.preventDefault();
       }
     };
@@ -168,394 +126,264 @@ export default function EmberfallGame() {
   }, []);
 
   useEffect(() => {
+    if (won || lives <= 0) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setTimer((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timerId);
+  }, [won, lives]);
+
+  useEffect(() => {
+    if (timer > 0 || won || lives <= 0) {
+      return;
+    }
+
+    setLives((current) => Math.max(0, current - 1));
+    x.current = 70;
+    y.current = BASELINE_Y;
+    vx.current = 0;
+    vy.current = 0;
+    setTimer(250);
+  }, [timer, won, lives]);
+
+  useEffect(() => {
     let raf = 0;
     let lastTime = performance.now();
 
     const loop = (time: number) => {
-      const delta = clamp((time - lastTime) / 16.667, 0.6, 1.8);
+      const dt = clamp((time - lastTime) / 16.667, 0.65, 1.7);
       lastTime = time;
 
-      if (heroHp <= 0) {
-        setHeroAnim("hurt");
+      if (won || lives <= 0) {
+        setTick((value) => value + 1);
         raf = requestAnimationFrame(loop);
         return;
       }
 
-      combatCooldown.current = Math.max(0, combatCooldown.current - delta);
-      dashCooldown.current = Math.max(0, dashCooldown.current - delta);
-      hurtCooldown.current = Math.max(0, hurtCooldown.current - delta);
+      invuln.current = Math.max(0, invuln.current - dt);
 
-      const left = keys.current["a"] || keys.current["arrowleft"];
-      const right = keys.current["d"] || keys.current["arrowright"];
-      const jump = keys.current["w"] || keys.current[" "];
-      const attack = keys.current["j"];
-      const special = keys.current["k"];
-      const dash = keys.current["shift"];
+      const moveLeft = keys.current["a"] || keys.current["arrowleft"];
+      const moveRight = keys.current["d"] || keys.current["arrowright"];
+      const crouch = keys.current["s"] || keys.current["arrowdown"];
+      const jumpPressed = keys.current["w"] || keys.current[" "] || keys.current["arrowup"];
 
-      if (left) {
-        heroVx.current -= 0.72 * delta;
+      if (moveLeft) {
+        vx.current -= 0.8 * dt;
         facing.current = -1;
       }
 
-      if (right) {
-        heroVx.current += 0.72 * delta;
+      if (moveRight) {
+        vx.current += 0.8 * dt;
         facing.current = 1;
       }
 
-      if (!left && !right) {
-        heroVx.current *= 0.85;
+      if (!moveLeft && !moveRight) {
+        vx.current *= 0.8;
       }
 
-      heroVx.current = clamp(heroVx.current, -6.4, 6.4);
+      vx.current = clamp(vx.current, -selectedHero.speed, selectedHero.speed);
 
-      const onGround = heroY.current >= GROUND_Y;
-      if (jump && onGround) {
-        heroVy.current = -14.9;
+      const standingOnPlatform = platforms.find(
+        (platform) =>
+          x.current + HERO_WIDTH > platform.x &&
+          x.current < platform.x + platform.width &&
+          Math.abs(y.current - platform.y) < 4 &&
+          vy.current >= 0
+      );
+
+      const onGround = y.current >= BASELINE_Y || Boolean(standingOnPlatform);
+
+      if (jumpPressed && onGround) {
+        vy.current = -selectedHero.jumpPower;
       }
 
-      if (dash && dashCooldown.current <= 0 && Math.abs(heroVx.current) > 0.6) {
-        heroVx.current += 8.5 * facing.current;
-        dashCooldown.current = 42;
-        setHeroAnim("dash");
-      }
+      vy.current += GRAVITY * dt;
+      x.current += vx.current * dt;
+      y.current += vy.current * dt;
 
-      if ((attack || special) && combatCooldown.current <= 0) {
-        const strikeRange = special ? 180 : 110;
-        const strikeDamage = special ? 48 + heroLevel * 5 : 22 + heroLevel * 3;
-        const strikeX = heroX.current + (facing.current === 1 ? strikeRange : -strikeRange);
+      let landed = false;
 
-        setEnemies((current) => {
-          let comboGain = 0;
-          const next = current.map((enemy) => {
-            if (!enemy.alive) {
-              return enemy;
-            }
+      for (const platform of platforms) {
+        const wasAbove = y.current - vy.current <= platform.y;
+        const withinX = x.current + HERO_WIDTH > platform.x && x.current < platform.x + platform.width;
+        const crossedTop = y.current >= platform.y && y.current <= platform.y + 15;
 
-            const withinX = Math.abs(enemy.x - strikeX) < (special ? 100 : 72);
-            const withinY = Math.abs(enemy.y - heroY.current) < 70;
-            if (!withinX || !withinY) {
-              return enemy;
-            }
-
-            const hp = enemy.hp - strikeDamage;
-            comboGain += 1;
-
-            if (hp <= 0) {
-              setCoins((value) => value + 6 + enemy.level * 2);
-              setXp((value) => value + 14 + enemy.level * 4);
-              return { ...enemy, hp: 0, alive: false };
-            }
-
-            return { ...enemy, hp, x: enemy.x + 22 * facing.current };
-          });
-
-          if (comboGain > 0) {
-            setCombo((value) => value + comboGain);
-          }
-
-          return next;
-        });
-
-        if (special) {
-          setSparks((current) => [
-            ...current,
-            {
-              id: Date.now(),
-              x: heroX.current + 16,
-              y: heroY.current - 20,
-              vx: facing.current * 11,
-              life: 24,
-              team: "hero",
-              damage: 34 + heroLevel * 4
-            }
-          ]);
+        if (withinX && wasAbove && crossedTop && vy.current >= 0) {
+          y.current = platform.y;
+          vy.current = 0;
+          landed = true;
+          break;
         }
-
-        combatCooldown.current = special ? 34 : 16;
-        setHeroAnim("attack");
       }
 
-      heroVy.current += GRAVITY * delta;
-      heroY.current += heroVy.current * delta;
-      heroX.current += heroVx.current * delta;
-
-      if (heroY.current >= GROUND_Y) {
-        heroY.current = GROUND_Y;
-        heroVy.current = 0;
+      if (y.current >= BASELINE_Y) {
+        y.current = BASELINE_Y;
+        vy.current = 0;
+        landed = true;
       }
 
-      heroX.current = clamp(heroX.current, 0, WORLD_WIDTH - HERO_WIDTH);
+      x.current = clamp(x.current, 0, TRACK_LENGTH - HERO_WIDTH);
 
-      setEnemies((current) =>
-        current.map((enemy) => {
-          if (!enemy.alive) {
-            return enemy;
+      setCoins((current) =>
+        current.map((coin) => {
+          if (coin.picked) {
+            return coin;
           }
 
-          const dx = heroX.current - enemy.x;
-          const distance = Math.abs(dx);
-          let nextX = enemy.x;
-          let nextVx = enemy.vx;
-          let nextCooldown = Math.max(0, enemy.attackCooldown - delta);
-
-          if (distance < enemy.aggroRange) {
-            if (enemy.type !== "turret") {
-              nextVx = Math.sign(dx || 1) * enemy.speed;
-              nextX += nextVx * delta;
-            }
-
-            if (distance < 60 && nextCooldown <= 0) {
-              nextCooldown = enemy.type === "brute" ? 44 : 32;
-              if (hurtCooldown.current <= 0) {
-                const incoming = enemy.damage;
-                setHeroHp((value) => Math.max(0, value - incoming));
-                hurtCooldown.current = 22;
-                setCombo(0);
-                setHeroAnim("hurt");
-              }
-            }
-
-            if (enemy.type === "turret" && distance < 360 && nextCooldown <= 0) {
-              nextCooldown = 72;
-              setSparks((currentSparks) => [
-                ...currentSparks,
-                {
-                  id: Date.now() + enemy.id,
-                  x: enemy.x,
-                  y: enemy.y - 28,
-                  vx: Math.sign(dx || 1) * 6.2,
-                  life: 80,
-                  team: "enemy",
-                  damage: 9 + enemy.level * 2
-                }
-              ]);
-            }
-          } else {
-            if (enemy.type !== "turret") {
-              nextX += nextVx * delta;
-              const roamMin = enemy.id * 200;
-              const roamMax = roamMin + 170;
-              if (nextX < roamMin || nextX > roamMax) {
-                nextVx *= -1;
-              }
-            }
+          const hit = Math.abs(coin.x - (x.current + HERO_WIDTH / 2)) < 22 && Math.abs(coin.y - y.current) < 42;
+          if (!hit) {
+            return coin;
           }
 
-          return {
-            ...enemy,
-            x: clamp(nextX, 0, WORLD_WIDTH - 40),
-            vx: nextVx,
-            attackCooldown: nextCooldown
-          };
+          setScore((value) => value + 100);
+          return { ...coin, picked: true };
         })
       );
 
-      setSparks((current) => {
-        const moved = current
-          .map((spark) => ({ ...spark, x: spark.x + spark.vx * delta, life: spark.life - delta }))
-          .filter((spark) => spark.life > 0);
+      for (const hazard of hazards) {
+        const hazardY = hazard.lane === "ground" ? BASELINE_Y : BASELINE_Y - 112;
+        const overlapX = x.current + HERO_WIDTH > hazard.x && x.current < hazard.x + hazard.width;
+        const overlapY = Math.abs(y.current - hazardY) < 48;
 
-        return moved.filter((spark) => {
-          if (spark.team === "hero") {
-            let collided = false;
-            setEnemies((currentEnemies) =>
-              currentEnemies.map((enemy) => {
-                if (!enemy.alive || collided) {
-                  return enemy;
-                }
-                const hit = Math.abs(enemy.x - spark.x) < 34 && Math.abs(enemy.y - spark.y) < 66;
-                if (!hit) {
-                  return enemy;
-                }
-                collided = true;
-                const hp = enemy.hp - spark.damage;
-                if (hp <= 0) {
-                  setCoins((value) => value + 4 + enemy.level * 2);
-                  setXp((value) => value + 10 + enemy.level * 3);
-                  return { ...enemy, hp: 0, alive: false };
-                }
-                return { ...enemy, hp };
-              })
-            );
-            return !collided;
-          }
-
-          const hitHero = Math.abs(heroX.current - spark.x) < 34 && Math.abs(heroY.current - spark.y) < 62;
-          if (hitHero && hurtCooldown.current <= 0) {
-            setHeroHp((value) => Math.max(0, value - spark.damage));
-            hurtCooldown.current = 18;
-            setCombo(0);
-            return false;
-          }
-          return true;
-        });
-      });
-
-      const nextStoryIndex = storyIndexRef.current + 1;
-      if (nextStoryIndex < storyBeats.length && heroX.current >= storyBeats[nextStoryIndex].x) {
-        storyIndexRef.current = nextStoryIndex;
-        setStory(storyBeats[nextStoryIndex]);
-        setQuestProgress(nextStoryIndex);
+        if (overlapX && overlapY && invuln.current <= 0) {
+          invuln.current = 95;
+          setLives((current) => Math.max(0, current - 1));
+          setScore((current) => Math.max(0, current - 120));
+          x.current = Math.max(60, x.current - 120);
+          break;
+        }
       }
 
-      const leveled = 1 + Math.floor(xp / 120);
-      if (leveled !== heroLevel) {
-        setHeroLevel(leveled);
+      if (x.current >= LEVEL_END && collected >= 42) {
+        setWon(true);
       }
 
-      const camera = clamp(heroX.current - CAMERA_WIDTH / 2, 0, WORLD_WIDTH - CAMERA_WIDTH);
-      setCameraX(camera);
+      const cam = clamp(x.current - VIEWPORT_WIDTH / 2, 0, TRACK_LENGTH - VIEWPORT_WIDTH);
+      setCameraX(cam);
 
-      if (heroY.current < GROUND_Y - 5) {
-        setHeroAnim("jump");
-      } else if (Math.abs(heroVx.current) > 1.3) {
-        setHeroAnim("run");
-      } else if (combatCooldown.current > 0 && heroAnim !== "dash") {
-        setHeroAnim("attack");
-      } else if (hurtCooldown.current > 0) {
-        setHeroAnim("hurt");
-      } else if (dashCooldown.current > 32) {
-        setHeroAnim("dash");
+      if (invuln.current > 0) {
+        setAnim("hurt");
+      } else if (!landed) {
+        setAnim("jump");
+      } else if (crouch) {
+        setAnim("slide");
+      } else if (Math.abs(vx.current) > 1.3) {
+        setAnim("run");
       } else {
-        setHeroAnim("idle");
+        setAnim("idle");
       }
 
-      setWorldTick((value) => value + 1);
+      setTick((value) => value + 1);
       raf = requestAnimationFrame(loop);
     };
 
     raf = requestAnimationFrame(loop);
-
     return () => cancelAnimationFrame(raf);
-  }, [heroHp, heroLevel, xp, heroAnim]);
+  }, [selectedHero, won, lives, collected]);
 
-  const resetWorld = () => {
-    heroX.current = 80;
-    heroY.current = GROUND_Y;
-    heroVx.current = 0;
-    heroVy.current = 0;
-    facing.current = 1;
-    setHeroHp(MAX_HP);
-    setEnemies(spawnEnemies());
-    setSparks([]);
-    setCoins(0);
-    setXp(0);
-    setHeroLevel(1);
-    setCombo(0);
-    storyIndexRef.current = 0;
-    setStory(storyBeats[0]);
-    setQuestProgress(0);
+  const restart = () => {
+    x.current = 70;
+    y.current = BASELINE_Y;
+    vx.current = 0;
+    vy.current = 0;
+    setCoins(seedCoins());
+    setScore(0);
+    setLives(3);
+    setTimer(250);
+    setWon(false);
+    setAnim("idle");
     setCameraX(0);
   };
 
   return (
-    <main className="mega-shell">
-      <header className="title-card">
-        <h1>SKYBOUND SPROCKET: LUMA RESCUE</h1>
+    <main className="retro-shell">
+      <header className="retro-title">
+        <h1>STAR DASH RIDERS</h1>
         <p>
-          A colorful side-scrolling platform adventure inspired by classic jump-and-run games with brand-new heroes, rivals, and story beats.
+          Total rewrite: same side-scrolling platform system, brand new cast, and full animation states for run, jump,
+          slide, and damage.
         </p>
       </header>
 
-      <section className="hud-panel">
-        <div>
-          <p className="label">Hero</p>
-          <h2>Nico the Cloud Courier · Lv {heroLevel}</h2>
-          <p className="sub">Biome: {zone.label}</p>
-        </div>
-        <div className="stats-row">
-          <span>HP {heroHp}/{MAX_HP}</span>
-          <span>XP {xp}</span>
-          <span>Coins {coins}</span>
-          <span>Combo x{combo}</span>
-          <span>{aliveEnemies.length} baddies active</span>
-        </div>
+      <section className="hero-select" aria-label="Character select">
+        {heroes.map((hero) => (
+          <button
+            key={hero.id}
+            type="button"
+            className={selectedHero.id === hero.id ? "active" : ""}
+            onClick={() => {
+              setSelectedHero(hero);
+              restart();
+            }}
+          >
+            <span>{hero.glyph}</span>
+            <strong>{hero.name}</strong>
+            <small>SPD {hero.speed.toFixed(1)} · JMP {hero.jumpPower.toFixed(1)}</small>
+          </button>
+        ))}
       </section>
 
-      <section className="game-frame" role="application" aria-label="Story platformer game arena">
-        <div className="sky" style={{ background: zone.sky }} />
+      <section className="hud-strip">
+        <span>Hero: {selectedHero.name}</span>
+        <span>Score: {score}</span>
+        <span>Coins: {collected}/{coins.length}</span>
+        <span>Lives: {lives}</span>
+        <span>Time: {timer}</span>
+        <span>Progress: {Math.min(100, progress)}%</span>
+      </section>
+
+      <section className="game-frame" role="application" aria-label="Platformer game area">
+        <div className="sky-layer" />
+        <div className="mountains" />
 
         <div className="world" style={{ transform: `translateX(${-cameraX}px)` }}>
-          {biomeBands.map((band) => (
-            <div
-              key={band.id}
-              className="biome-band"
-              style={{ left: band.start, width: band.end - band.start }}
-              data-biome={band.id}
-            >
-              <span>{band.label}</span>
-            </div>
+          {platforms.map((platform) => (
+            <div key={platform.id} className="platform" style={{ left: platform.x, top: platform.y, width: platform.width }} />
           ))}
 
-          {Array.from({ length: 80 }).map((_, index) => (
+          {hazards.map((hazard) => (
             <div
-              key={`platform-${index}`}
-              className="floating-platform"
-              style={{
-                left: 180 + index * 94,
-                bottom: index % 4 === 0 ? 190 : index % 3 === 0 ? 230 : 128,
-                width: 82 + (index % 3) * 36
-              }}
+              key={hazard.id}
+              className={`hazard ${hazard.lane}`}
+              style={{ left: hazard.x, top: hazard.lane === "ground" ? BASELINE_Y + 48 : BASELINE_Y - 64, width: hazard.width }}
             />
           ))}
 
-          {enemies.map((enemy) =>
-            enemy.alive ? (
-              <article
-                key={enemy.id}
-                className={`enemy enemy-${enemy.type}`}
-                style={{ left: enemy.x, bottom: 80 + (GROUND_Y - enemy.y) }}
-              >
-                <span className="enemy-core">{enemy.type === "brute" ? "🪵" : enemy.type === "turret" ? "🎯" : "🦔"}</span>
-                <small>Lv {enemy.level}</small>
-                <div className="enemy-hp-bar">
-                  <i style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }} />
-                </div>
-              </article>
-            ) : null
+          {coins.map((coin) =>
+            coin.picked ? null : <div key={coin.id} className="coin" style={{ left: coin.x, top: coin.y }} aria-hidden="true" />
           )}
 
-          {sparks.map((spark) => (
-            <span
-              key={spark.id}
-              className={`spark ${spark.team}`}
-              style={{ left: spark.x, bottom: 96 + (GROUND_Y - spark.y) }}
-            />
-          ))}
-
           <article
-            className={`hero hero-${heroAnim}`}
-            style={{ left: heroX.current, bottom: 80 + (GROUND_Y - heroY.current), transform: `scaleX(${facing.current})` }}
+            className={`hero hero-${anim}`}
+            style={{ left: x.current, top: y.current - HERO_HEIGHT, borderColor: selectedHero.color, transform: `scaleX(${facing.current})` }}
+            aria-label={`${selectedHero.name} ${anim}`}
           >
-            <span className="hero-glyph">🧢</span>
-            <small>{heroAnim.toUpperCase()}</small>
+            <span>{selectedHero.glyph}</span>
+            <small>{anim.toUpperCase()}</small>
           </article>
+
+          <div className="finish-flag" style={{ left: LEVEL_END + 70, top: BASELINE_Y - 130 }}>
+            🏁
+          </div>
 
           <div className="ground" />
         </div>
       </section>
 
-      <section className="story-panel">
-        <div>
-          <p className="label">Story Beat {questProgress + 1}/{storyBeats.length}</p>
-          <h3>{story.title}</h3>
-          <p>{story.body}</p>
+      <section className="status-panel">
+        <p>
+          Controls: <strong>A / D</strong> move, <strong>W or Space</strong> jump, <strong>S</strong> slide. Collect at least 42 coins before the finish flag.
+        </p>
+        <div className="status-actions">
+          <button type="button" onClick={restart}>Restart Run</button>
+          {won ? <strong className="win-banner">You cleared Star Dash Ridge!</strong> : null}
+          {!won && lives <= 0 ? <strong className="lose-banner">Out of lives — restart to try again.</strong> : null}
+          <small>Engine Tick: {tick}</small>
         </div>
-        <div className="controls">
-          <p>Controls: A/D move · W/Space jump · Shift sprint dash · J spin bop · K comet burst.</p>
-          <button type="button" onClick={resetWorld}>Restart Adventure</button>
-        </div>
-      </section>
-
-      <section className="mini-map">
-        <div className="map-track">
-          <span className="map-hero" style={{ left: `${(heroX.current / WORLD_WIDTH) * 100}%` }} />
-          {aliveEnemies.slice(0, 45).map((enemy) => (
-            <i key={`dot-${enemy.id}`} style={{ left: `${(enemy.x / WORLD_WIDTH) * 100}%` }} />
-          ))}
-        </div>
-        <p>World distance: {Math.round(heroX.current)} / {WORLD_WIDTH}</p>
-        <p>Engine tick: {worldTick}</p>
       </section>
     </main>
   );
