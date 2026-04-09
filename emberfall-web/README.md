@@ -1,6 +1,6 @@
-# Emberfall Web (Vercel)
+# Skybound Sprocket Web (Vercel)
 
-Cross-platform web port of Emberfall built with Next.js.
+A browser platformer inspired by classic run-and-jump adventures, rebuilt with new characters and story using Next.js.
 
 ## Commands
 

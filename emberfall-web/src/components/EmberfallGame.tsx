@@ -47,36 +47,36 @@ const MAX_HP = 170;
 const storyBeats: StoryBeat[] = [
   {
     x: 180,
-    title: "Starpipe Village",
-    body: "Princess Nova is trapped beyond the Rift Fortress. Recover three Cosmic Cores to open the gate."
+    title: "Bramblebrook Borough",
+    body: "Inventor Luma has been captured in Clocktop Keep. Collect three Sky Keys to unlock the final drawbridge."
   },
   {
     x: 1750,
-    title: "Mossfall Frontier",
-    body: "A ranger warns you: enemies now use coordinated formations and ranged fire."
+    title: "Bubblebluff Meadows",
+    body: "Mayor Pip warns you that spring-loaded troopers patrol in squads and can pin you down from afar."
   },
   {
     x: 3420,
-    title: "Sunken Gearworks",
-    body: "Ancient machines wake up. Brutes can charge and break your momentum."
+    title: "Cogwhistle Caverns",
+    body: "Underground lifts rumble awake. Heavy bruisers can shoulder-check you off moving platforms."
   },
   {
     x: 5200,
-    title: "Voidvine Expanse",
-    body: "Dark vines mutate into elite hunters. Their levels spike hard here."
+    title: "Thunderpetal Heights",
+    body: "Storm blossoms spawn elite hunters here, and every encounter scales harder than before."
   },
   {
     x: 7060,
-    title: "Rift Fortress",
-    body: "Final zone unlocked. Defeat the Warden Legion and rescue Nova."
+    title: "Clocktop Keep",
+    body: "Final gate unlocked. Defeat Baron Brambletron and rescue Luma before midnight chimes."
   }
 ];
 
 const biomeBands = [
-  { id: "starfield", start: 0, end: 1580, label: "Starpipe Grasslands", sky: "var(--sky-one)" },
-  { id: "moss", start: 1580, end: 3120, label: "Mossfall Frontier", sky: "var(--sky-two)" },
-  { id: "gear", start: 3120, end: 4900, label: "Sunken Gearworks", sky: "var(--sky-three)" },
-  { id: "void", start: 4900, end: WORLD_WIDTH, label: "Voidvine Expanse", sky: "var(--sky-four)" }
+  { id: "starfield", start: 0, end: 1580, label: "Bramblebrook Path", sky: "var(--sky-one)" },
+  { id: "moss", start: 1580, end: 3120, label: "Bubblebluff Meadows", sky: "var(--sky-two)" },
+  { id: "gear", start: 3120, end: 4900, label: "Cogwhistle Caverns", sky: "var(--sky-three)" },
+  { id: "void", start: 4900, end: WORLD_WIDTH, label: "Thunderpetal Heights", sky: "var(--sky-four)" }
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -451,17 +451,16 @@ export default function EmberfallGame() {
   return (
     <main className="mega-shell">
       <header className="title-card">
-        <h1>EMBERFALL: STARBREAKER ODYSSEY</h1>
+        <h1>SKYBOUND SPROCKET: LUMA RESCUE</h1>
         <p>
-          Massive side-scrolling open world with movement tech, combat combos, ranged enemies, scaling levels, and
-          story milestones.
+          A colorful side-scrolling platform adventure inspired by classic jump-and-run games with brand-new heroes, rivals, and story beats.
         </p>
       </header>
 
       <section className="hud-panel">
         <div>
           <p className="label">Hero</p>
-          <h2>Kael the Rift Runner · Lv {heroLevel}</h2>
+          <h2>Nico the Cloud Courier · Lv {heroLevel}</h2>
           <p className="sub">Biome: {zone.label}</p>
         </div>
         <div className="stats-row">
@@ -469,11 +468,11 @@ export default function EmberfallGame() {
           <span>XP {xp}</span>
           <span>Coins {coins}</span>
           <span>Combo x{combo}</span>
-          <span>{aliveEnemies.length} foes alive</span>
+          <span>{aliveEnemies.length} baddies active</span>
         </div>
       </section>
 
-      <section className="game-frame" role="application" aria-label="Open world platform combat arena">
+      <section className="game-frame" role="application" aria-label="Story platformer game arena">
         <div className="sky" style={{ background: zone.sky }} />
 
         <div className="world" style={{ transform: `translateX(${-cameraX}px)` }}>
@@ -507,7 +506,7 @@ export default function EmberfallGame() {
                 className={`enemy enemy-${enemy.type}`}
                 style={{ left: enemy.x, bottom: 80 + (GROUND_Y - enemy.y) }}
               >
-                <span className="enemy-core">{enemy.type === "brute" ? "🦍" : enemy.type === "turret" ? "🛰️" : "👾"}</span>
+                <span className="enemy-core">{enemy.type === "brute" ? "🪵" : enemy.type === "turret" ? "🎯" : "🦔"}</span>
                 <small>Lv {enemy.level}</small>
                 <div className="enemy-hp-bar">
                   <i style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }} />
@@ -528,7 +527,7 @@ export default function EmberfallGame() {
             className={`hero hero-${heroAnim}`}
             style={{ left: heroX.current, bottom: 80 + (GROUND_Y - heroY.current), transform: `scaleX(${facing.current})` }}
           >
-            <span className="hero-glyph">⚔️</span>
+            <span className="hero-glyph">🧢</span>
             <small>{heroAnim.toUpperCase()}</small>
           </article>
 
@@ -543,8 +542,8 @@ export default function EmberfallGame() {
           <p>{story.body}</p>
         </div>
         <div className="controls">
-          <p>Controls: A/D move · W/Space jump · Shift dash · J slash · K special shot.</p>
-          <button type="button" onClick={resetWorld}>Rebuild World</button>
+          <p>Controls: A/D move · W/Space jump · Shift sprint dash · J spin bop · K comet burst.</p>
+          <button type="button" onClick={resetWorld}>Restart Adventure</button>
         </div>
       </section>
 
