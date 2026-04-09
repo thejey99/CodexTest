@@ -21,3 +21,26 @@ When importing this repository in Vercel:
 - Root directory: `emberfall-web`
 - Build command: `npm run build`
 - Output: default (managed by Next.js)
+
+### CLI deploy (avoid plugin 404s)
+
+If you tried:
+
+- `npx plugins add vercel/vercel-plugin`
+
+that command is not part of the Vercel CLI workflow and can return a 404.
+Use the Vercel CLI directly instead:
+
+```bash
+cd emberfall-web
+npx vercel login
+npx vercel
+```
+
+For production:
+
+```bash
+npx vercel --prod
+```
+
+If you still get a 404, verify you are logged into the correct Vercel account/team and that the project path is set to `emberfall-web` during linking.
