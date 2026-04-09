@@ -17,8 +17,10 @@ The UI is responsive and optimized for touch targets (44px minimum button height
 
 ## Root-level fallback (prevents 404 if Root Directory is wrong)
 
-This repository includes a root `vercel.json` that points Vercel to `emberfall-web/package.json`.
-That means deployments from the repository root still build the Next.js app instead of returning a 404.
+This repository includes a root `vercel.json` that points Vercel to `emberfall-web/package.json`
+and adds a catch-all route to `emberfall-web/$1`.
+That means deployments from the repository root still build the Next.js app and route requests
+into the subdirectory build output instead of returning a 404.
 
 
 When importing this repository in Vercel:
