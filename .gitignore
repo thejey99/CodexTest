@@ -1,0 +1,7 @@
+# JavaScript/TypeScript dependencies and build outputs
+**/node_modules/
+**/.next/
+
+# Logs and OS/editor artifacts
+*.log
+.DS_Store
