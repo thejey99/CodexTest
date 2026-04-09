@@ -517,6 +517,20 @@ export default function EmberfallGame() {
                   </button>
                 </div>
                 <small>Fail state: {mission.failState}</small>
+                {mission.branches ? (
+                  <div className="story-actions-row">
+                    {mission.branches.map((branch) => (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        disabled={Boolean(questMachine.getSelectedBranch(mission.id))}
+                        onClick={() => runQuestMutation((machine) => machine.chooseBranch(mission.id, branch.id))}
+                      >
+                        {branch.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             ))}
 
@@ -574,6 +588,13 @@ export default function EmberfallGame() {
 
         <section className="dialogue-console">
           <h3>Dialogue Console</h3>
+          <div className="story-actions-row">
+            {dialogueNodes.map((node) => (
+              <button key={node.id} type="button" onClick={() => setDialogueNodeId(node.id)}>
+                {node.speaker}
+              </button>
+            ))}
+          </div>
           {currentDialogueNode ? (
             <>
               <p>

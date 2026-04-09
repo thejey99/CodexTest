@@ -1,4 +1,4 @@
-import type { MissionDefinition, QuestPrerequisite } from "../data/story/types";
+import type { MissionDefinition, MissionBranch, QuestPrerequisite } from "../data/story/types";
 
 export type QuestMissionStatus = "locked" | "available" | "active" | "completed" | "failed";
 
@@ -81,6 +81,10 @@ export class QuestStateMachine {
     return true;
   }
 
+  getSelectedBranch(missionId: string): string | undefined {
+    return this.state.selectedBranches[missionId];
+  }
+
   chooseBranch(missionId: string, branchId: string): boolean {
     const mission = this.missionMap.get(missionId);
     if (!mission?.branches) {
@@ -93,13 +97,8 @@ export class QuestStateMachine {
     }
 
     const existingBranch = this.state.selectedBranches[missionId];
-    if (existingBranch && existingBranch !== branchId) {
-      const existing = mission.branches.find((item) => item.id === existingBranch);
-      const blocksNew = existing?.excludes?.includes(branchId);
-      const blockedByNew = branch.excludes?.includes(existingBranch);
-      if (blocksNew || blockedByNew) {
-        return false;
-      }
+    if (existingBranch) {
+      return existingBranch === branchId;
     }
 
     this.state.selectedBranches[missionId] = branchId;
@@ -108,6 +107,7 @@ export class QuestStateMachine {
       this.state.flags = { ...this.state.flags, ...branch.setFlags };
     }
 
+    this.applyExcludedBranchFlags(mission.branches, branch);
     return true;
   }
 
@@ -137,6 +137,24 @@ export class QuestStateMachine {
 
   meetsAll(requirements: QuestPrerequisite[]): boolean {
     return requirements.every((requirement) => this.meetsPrerequisite(requirement));
+  }
+
+  private applyExcludedBranchFlags(branches: MissionBranch[], selectedBranch: MissionBranch): void {
+    const excluded = selectedBranch.excludes ?? [];
+    if (excluded.length === 0) {
+      return;
+    }
+
+    for (const branchId of excluded) {
+      const branch = branches.find((item) => item.id === branchId);
+      if (!branch?.setFlags) {
+        continue;
+      }
+
+      for (const key of Object.keys(branch.setFlags)) {
+        this.state.flags[key] = false;
+      }
+    }
   }
 }
 

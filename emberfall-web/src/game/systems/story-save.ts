@@ -24,13 +24,29 @@ const isV1 = (value: unknown): value is StorySaveV1 => {
   return cast.version === 1 && Array.isArray(cast.completedMissionIds);
 };
 
+const isQuestState = (value: unknown): value is QuestProgressState => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const cast = value as Partial<QuestProgressState>;
+  return (
+    Array.isArray(cast.activeMissionIds) &&
+    Array.isArray(cast.completedMissionIds) &&
+    Array.isArray(cast.failedMissionIds) &&
+    typeof cast.selectedBranches === "object" &&
+    typeof cast.flags === "object" &&
+    typeof cast.relationship === "object"
+  );
+};
+
 const isV2 = (value: unknown): value is StorySaveV2 => {
   if (!value || typeof value !== "object") {
     return false;
   }
 
   const cast = value as Partial<StorySaveV2>;
-  return cast.version === 2 && Boolean(cast.quest);
+  return cast.version === 2 && isQuestState(cast.quest);
 };
 
 const migrateToLatest = (raw: unknown): StorySaveV2 => {
@@ -55,6 +71,14 @@ const migrateToLatest = (raw: unknown): StorySaveV2 => {
   };
 };
 
+const parseSave = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
 export const loadStorySave = (): StorySaveV2 => {
   if (typeof window === "undefined") {
     return { version: CURRENT_VERSION, quest: createDefaultQuestProgress() };
@@ -65,7 +89,7 @@ export const loadStorySave = (): StorySaveV2 => {
     return { version: CURRENT_VERSION, quest: createDefaultQuestProgress() };
   }
 
-  const parsed: unknown = JSON.parse(raw);
+  const parsed = parseSave(raw);
   return migrateToLatest(parsed);
 };
 

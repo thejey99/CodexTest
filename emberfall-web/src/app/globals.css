@@ -377,6 +377,14 @@ button {
   background: #2a3c89;
 }
 
+.story-tabs button:disabled,
+.choice-button:disabled,
+.story-actions-row button:disabled,
+.story-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .story-panel-grid {
   display: grid;
   gap: 10px;
