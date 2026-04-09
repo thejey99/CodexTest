@@ -61,10 +61,73 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 10px;
-  background: linear-gradient(180deg, #2e4f2e, #213721);
+  background: linear-gradient(180deg, #3b6f92 0%, #3d5b76 48%, #2f492f 49%, #213721 100%);
   border: 1px solid #3f5a3f;
   padding: 10px;
   border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.track-wrap {
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid #4f4f4f;
+  background: #171717;
+  overflow: hidden;
+}
+
+.track-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #ffcd68, #ff6c48);
+  transition: width 200ms ease;
+}
+
+.platform-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.platform-node {
+  border: 1px solid #55656d;
+  border-radius: 8px;
+  background: rgba(21, 21, 21, 0.65);
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  font-size: 0.76rem;
+}
+
+.platform-node.current {
+  border-color: #ffe07a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe07a 50%, transparent);
+}
+
+.runner {
+  position: absolute;
+  top: 62px;
+  font-size: 1.2rem;
+  transition: left 200ms ease;
+}
+
+.runner.jumping {
+  animation: hop 420ms ease;
+}
+
+@keyframes hop {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .lane-node {
@@ -143,6 +206,7 @@ h1 {
 
 .actions.movement {
   margin-top: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .actions .primary,
@@ -183,5 +247,9 @@ h1 {
   .hud,
   .overworld {
     grid-template-columns: 1fr;
+  }
+
+  .platform-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
