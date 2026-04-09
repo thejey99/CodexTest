@@ -7,6 +7,7 @@ const maxPlayerHearts = 6;
 
 export default function EmberfallGame() {
   const [playerIndex, setPlayerIndex] = useState(0);
+  const [isJumping, setIsJumping] = useState(false);
   const [selectedWeapon, setSelectedWeapon] = useState(weapons[0].id);
   const [unlockedFragments, setUnlockedFragments] = useState([survivorFragment]);
   const [clearedLevelIds, setClearedLevelIds] = useState<number[]>([]);
@@ -20,6 +21,7 @@ export default function EmberfallGame() {
   );
 
   const currentLevel = levels[playerIndex];
+  const progressPercent = (playerIndex / Math.max(levels.length - 1, 1)) * 100;
   const hasNext = playerIndex < levels.length - 1;
   const hasPrev = playerIndex > 0;
   const levelIsCleared = clearedLevelIds.includes(currentLevel.id);
@@ -33,6 +35,7 @@ export default function EmberfallGame() {
 
   const moveToLevel = (nextIndex: number) => {
     setPlayerIndex(nextIndex);
+    setIsJumping(false);
     setEnemyHp(12);
     setPlayerHearts(maxPlayerHearts);
     setCombatLog("A new echo forms ahead. Sprint, jump, and strike through the lane.");
@@ -42,6 +45,15 @@ export default function EmberfallGame() {
     if (hasNext) {
       moveToLevel(playerIndex + 1);
     }
+  };
+
+  const jump = () => {
+    setIsJumping(true);
+    setCombatLog("Kael vaults over broken stone, landing into the next beat of battle.");
+
+    window.setTimeout(() => {
+      setIsJumping(false);
+    }, 420);
   };
 
   const moveLeft = () => {
@@ -131,8 +143,32 @@ export default function EmberfallGame() {
 
       <section className="card">
         <h2>2D Side-Scroller Route</h2>
-        <p className="muted">Linear left-to-right progression with lane-based melee and heart-based health.</p>
+        <p className="muted">Mario-style left-to-right lane with platform hops, story checkpoints, and live battles.</p>
+        <div className="track-wrap" aria-label="Campaign progress">
+          <div className="track-progress" style={{ width: `${progressPercent}%` }} />
+        </div>
         <div className="overworld" role="region" aria-label="2D side-scrolling route">
+          <div className="platform-strip">
+            {levels.map((level, index) => {
+              const isCurrent = index === playerIndex;
+              const isCleared = clearedLevelIds.includes(level.id);
+
+              return (
+                <div key={`platform-${level.id}`} className={`platform-node ${isCurrent ? "current" : ""}`}>
+                  <span>{isCleared ? "✅" : "🧱"}</span>
+                  <span>Stage {level.id}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div
+            className={`runner ${isJumping ? "jumping" : ""}`}
+            style={{ left: `calc(${progressPercent}% - 0.6rem)` }}
+            aria-hidden="true"
+          >
+            ⚔️
+          </div>
+
           {levels.map((level, index) => {
             const isCurrent = index === playerIndex;
             const isCleared = clearedLevelIds.includes(level.id);
@@ -149,6 +185,9 @@ export default function EmberfallGame() {
         <div className="actions movement">
           <button type="button" onClick={moveLeft} disabled={!hasPrev} aria-label="Run to previous checkpoint">
             ◀ Run Left
+          </button>
+          <button type="button" onClick={jump} aria-label="Jump over hazard">
+            ⤴ Jump
           </button>
           <button type="button" onClick={moveRight} disabled={!hasNext} aria-label="Run to next checkpoint">
             Run Right ▶
