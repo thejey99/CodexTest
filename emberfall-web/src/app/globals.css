@@ -57,19 +57,21 @@ h1 {
   color: #ff9f68;
 }
 
-.scroller {
+.overworld {
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  background: linear-gradient(180deg, #2e4f2e, #213721);
+  border: 1px solid #3f5a3f;
+  padding: 10px;
+  border-radius: 10px;
 }
 
 .lane-node {
   border: 1px solid var(--stroke);
   border-radius: 10px;
   padding: 10px;
-  background: #1a1a1a;
+  background: color-mix(in srgb, #193019 62%, #1a1a1a);
   min-height: 105px;
   display: grid;
   align-content: start;
@@ -77,9 +79,9 @@ h1 {
 }
 
 .lane-node.current {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
-  background: #2a1616;
+  border-color: #ffe07a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe07a 50%, transparent);
+  background: #3b341f;
 }
 
 .node-index {
@@ -94,7 +96,8 @@ h1 {
 }
 
 .segmented button,
-.actions button {
+.actions button,
+.combat-actions button {
   border: 1px solid var(--stroke);
   border-radius: 10px;
   background: #202020;
@@ -142,18 +145,43 @@ h1 {
   margin-top: 4px;
 }
 
-.actions .primary {
+.actions .primary,
+.combat-actions .primary {
   background: #8f2020;
   border-color: #bc3a3a;
 }
 
+.combat-card {
+  border-color: #6c4c1b;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.combat-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.combat-log {
+  border: 1px dashed #7d6445;
+  border-radius: 8px;
+  padding: 8px;
+  background: #1e1810;
+  min-height: 46px;
+}
+
 @media (max-width: 520px) {
   .segmented,
-  .actions {
+  .actions,
+  .combat-actions,
+  .hud,
+  .overworld {
     grid-template-columns: 1fr;
-  }
-
-  .scroller {
-    grid-template-columns: repeat(4, minmax(150px, 1fr));
   }
 }
