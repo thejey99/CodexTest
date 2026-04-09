@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "acts": ["act-ember-echo", "act-rift-oath"],
+  "chapters": 4,
+  "missions": 5,
+  "dialogueNodes": 3,
+  "endings": 3
+}

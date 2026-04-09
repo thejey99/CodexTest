@@ -335,3 +335,92 @@ button {
     justify-items: start;
   }
 }
+
+.story-hub {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 88%, black);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.story-hub h2 {
+  color: #9ce8ff;
+}
+
+.story-hub p {
+  color: var(--muted);
+}
+
+.story-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.story-tabs button,
+.choice-button,
+.story-actions-row button,
+.story-card button {
+  border: 1px solid #5f7ed5;
+  background: #1b2a66;
+  color: #f0f4ff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.story-tabs button.active {
+  border-color: #8be5ff;
+  background: #2a3c89;
+}
+
+.story-panel-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.story-card {
+  border: 1px solid #485faa;
+  border-radius: 12px;
+  background: #1a1f4f;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.story-card.muted {
+  opacity: 0.85;
+}
+
+.story-card.warning {
+  border-color: #bf6f8f;
+}
+
+.story-card.ending {
+  border-color: #7ad9b6;
+}
+
+.story-empty {
+  color: #9eb2f2;
+}
+
+.story-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dialogue-console {
+  border-top: 1px solid #3f4f93;
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.affinity-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
