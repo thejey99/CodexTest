@@ -35,7 +35,7 @@ export default function EmberfallGame() {
     setPlayerIndex(nextIndex);
     setEnemyHp(12);
     setPlayerHearts(maxPlayerHearts);
-    setCombatLog("A new echo forms in the ruins. Use arrows to strafe and attack.");
+    setCombatLog("A new echo forms ahead. Sprint, jump, and strike through the lane.");
   };
 
   const moveRight = () => {
@@ -68,7 +68,7 @@ export default function EmberfallGame() {
 
   const slashEnemy = () => {
     if (levelIsCleared) {
-      setCombatLog("Zone already pacified. Move to the next ruin.");
+      setCombatLog("Zone already pacified. Run to the next checkpoint.");
       return;
     }
 
@@ -98,7 +98,7 @@ export default function EmberfallGame() {
       return;
     }
 
-    setCombatLog(`You deal ${playerDamage} and take ${enemyDamage}. Keep circling and striking.`);
+    setCombatLog(`You deal ${playerDamage} and take ${enemyDamage}. Keep momentum and stay aggressive.`);
   };
 
   const healPlayer = () => {
@@ -130,9 +130,9 @@ export default function EmberfallGame() {
       <h1>EMBERFALL: ASH OF THE OATH</h1>
 
       <section className="card">
-        <h2>Overworld Route (Zelda-style)</h2>
-        <p className="muted">Top-down traversal with real-time melee exchanges and heart-based health.</p>
-        <div className="overworld" role="region" aria-label="Top-down route">
+        <h2>2D Side-Scroller Route</h2>
+        <p className="muted">Linear left-to-right progression with lane-based melee and heart-based health.</p>
+        <div className="overworld" role="region" aria-label="2D side-scrolling route">
           {levels.map((level, index) => {
             const isCurrent = index === playerIndex;
             const isCleared = clearedLevelIds.includes(level.id);
@@ -147,11 +147,11 @@ export default function EmberfallGame() {
           })}
         </div>
         <div className="actions movement">
-          <button type="button" onClick={moveLeft} disabled={!hasPrev}>
-            ◀ Strafe West
+          <button type="button" onClick={moveLeft} disabled={!hasPrev} aria-label="Run to previous checkpoint">
+            ◀ Run Left
           </button>
-          <button type="button" onClick={moveRight} disabled={!hasNext}>
-            Strafe East ▶
+          <button type="button" onClick={moveRight} disabled={!hasNext} aria-label="Run to next checkpoint">
+            Run Right ▶
           </button>
         </div>
       </section>
